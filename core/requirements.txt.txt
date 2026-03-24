@@ -1,5 +1,0 @@
-Django==3.2.5
-python==3.7 or above
-pip==3.2.4  or above
-web-browser: Google Chrome, Microsoft Edge, etc.
-Visual Studio Code, PyCharm ....... 

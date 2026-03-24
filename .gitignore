@@ -1,0 +1,27 @@
+# Environments
+Lib/
+Scripts/
+Include/
+.env
+venv/
+env/
+
+# Python & Django
+*.log
+*.pot
+*.pyc
+__pycache__/
+core/__pycache__/
+core/home/__pycache__/
+core/core/__pycache__/
+
+# Database
+db.sqlite3
+core/db.sqlite3
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# IDEs
+.vscode/
