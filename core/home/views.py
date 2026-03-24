@@ -1,68 +1,102 @@
-from django.shortcuts import render
+import json
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth.models import User
+from django.contrib.auth.decorators import login_required
+from django.views.decorators.clickjacking import xframe_options_sameorigin
+from django.http import JsonResponse
+from .models import Resume, Education, Experience, Project, Skill, Language, Achievement
 
-# Create your views here.
-def home(request): 
-    return render(request, 'index.html') 
-def gen_resume(request): 
-    if request.method == 'POST': 
-        name = request.POST.get('name', '') 
-        about = request.POST.get('about', '') 
-        age = request.POST.get('age', '') 
-        email = request.POST.get('email', '') 
-        phone = request.POST.get('phone', '') 
-        skill1 = request.POST.get('skill1', '') 
-        skill2 = request.POST.get('skill2', '') 
-        skill3 = request.POST.get('skill3', '') 
-        skill4 =request.POST.get('skill4', '') 
-        skill5 =request.POST.get('skill5', '') 
-        degree1 = request.POST.get('degree1', '') 
-        college1 = request.POST.get('college1', '') 
-        year1 = request.POST.get('year1', '') 
-        degree2 = request.POST.get('degree2', '') 
-        college2 = request.POST.get('college2', '') 
-        year2 = request.POST.get('year2', '')  
-        college3 = request.POST.get('college3', '') 
-        year3 = request.POST.get('year3', '') 
-        degree3 = request.POST.get('degree3', '')  
-        lang1 = request.POST.get('lang1', '') 
-        lang2 = request.POST.get('lang2', '') 
-        lang3 = request.POST.get('lang3', '')      
-        project1= request.POST.get('project1', '') 
-        durat1 = request.POST.get('duration1', '') 
-        desc1 = request.POST.get('desc1', '') 
-        project2 = request.POST.get('project2', '') 
-        durat2 = request.POST.get('duration2', '') 
-        desc2 = request.POST.get('desc2', '') 
-        company1 = request.POST.get('company1', '') 
-        post1 = request.POST.get('post1', '') 
-        duration1 = request.POST.get('duration1', '') 
-        lin11 = request.POST.get('lin11', '') 
-        company2 = request.POST.get('company2', '') 
-        post2 = request.POST.get('post2', '') 
-        duration2 = request.POST.get('duration2', '') 
-        lin21 = request.POST.get('lin21', '')  
-        ach1 = request.POST.get('ach1', '') 
-        ach2 = request.POST.get('ach2', '') 
-        ach3 = request.POST.get('ach3', '')  
-        return render(request, 'resume.html', {'name':name,  
-                                               'about':about, 'skill5':skill5,   
-                                               'age':age, 'email':email,  
-                                               'phone':phone, 'skill1':skill1, 
-                                               'skill2':skill2,  'skill3':skill3,  
-                                               'skill4':skill4,  'degree1':degree1,  
-                                               'college1':college1, 'year1':year1,  
-                                               'college3':college3, 'year3':year3,  
-                                               'degree3':degree3, 'lang1':lang1,  
-                                               'lang2':lang2,  'lang3':lang3, 
-                                               'degree2':degree2,  'college2':college2,  
-                                               'year2':year2, 'project1':project1, 
-                                               'durat1':durat1, 'desc1':desc1,  
-                                               'project2':project2,  'durat2':durat2, 
-                                               'desc2':desc2, 'company1':company1,  
-                                               'post1':post1, 'duration1': duration1,  
-                                               'company2':company2, 'post2':post2,  
-                                               'duration2': duration2,'lin11':lin11, 
-                                                'lin21':lin21, 'ach1':ach1, 
-                                                'ach2':ach2,'ach3':ach3 }) 
-      
-    return render(request, 'index.html') 
+def register_view(request):
+    if request.method == 'POST':
+        u = request.POST.get('username')
+        p = request.POST.get('password')
+        if not User.objects.filter(username=u).exists():
+            user = User.objects.create_user(username=u, password=p)
+            login(request, user)
+            return redirect('home')
+    return render(request, 'register.html')
+
+def login_view(request):
+    if request.method == 'POST':
+        u = request.POST.get('username')
+        p = request.POST.get('password')
+        user = authenticate(request, username=u, password=p)
+        if user:
+            login(request, user)
+            return redirect('home')
+    return render(request, 'login.html')
+
+def logout_view(request):
+    logout(request)
+    return redirect('login_view')
+
+@login_required(login_url='login_view')
+def home(request):
+    resume, _ = Resume.objects.get_or_create(user=request.user, title="My Resume")
+    return render(request, 'index.html', {'resume': resume})
+
+@login_required(login_url='login_view')
+def save_resume(request):
+    if request.method == 'POST':
+        resume_id = request.POST.get('resume_id')
+        resume = get_object_or_404(Resume, id=resume_id, user=request.user)
+        
+        resume.name = request.POST.get('name', '')
+        resume.email = request.POST.get('email', '')
+        resume.phone = request.POST.get('phone', '')
+        resume.linkedin = request.POST.get('linkedin', '')
+        resume.github = request.POST.get('github', '')
+        
+        template_choice = request.POST.get('template')
+        if template_choice:
+            resume.template = template_choice
+            
+        resume.save()
+
+        resume.educations.all().delete()
+        for i, (d, c, y) in enumerate(zip(request.POST.getlist('degree'), request.POST.getlist('college'), request.POST.getlist('edu_year'))):
+            if d or c: Education.objects.create(resume=resume, degree=d, college=c, year=y, order=i)
+
+        resume.projects.all().delete()
+        for i, (p, dr, ds) in enumerate(zip(request.POST.getlist('project'), request.POST.getlist('proj_duration'), request.POST.getlist('proj_desc'))):
+            if p: Project.objects.create(resume=resume, title=p, duration=dr, desc=ds, order=i)
+
+        resume.experiences.all().delete()
+        for i, (c, p, dr, ds) in enumerate(zip(request.POST.getlist('company'), request.POST.getlist('post'), request.POST.getlist('exp_duration'), request.POST.getlist('exp_desc'))):
+            if c: Experience.objects.create(resume=resume, company=c, post=p, duration=dr, desc=ds, order=i)
+
+        resume.skills.all().delete()
+        for i, s in enumerate(request.POST.getlist('skills')):
+            if s.strip(): Skill.objects.create(resume=resume, name=s, order=i)
+
+        resume.languages.all().delete()
+        for i, l in enumerate(request.POST.getlist('languages')):
+            if l.strip(): Language.objects.create(resume=resume, name=l, order=i)
+
+        resume.achievements.all().delete()
+        for i, a in enumerate(request.POST.getlist('achievement')):
+            if a.strip(): Achievement.objects.create(resume=resume, name=a, order=i)
+
+        return JsonResponse({'status': 'success'})
+    return JsonResponse({'status': 'error'})
+
+@login_required(login_url='login_view')
+@xframe_options_sameorigin
+def resume_preview(request, resume_id):
+    resume = get_object_or_404(Resume, id=resume_id, user=request.user)
+    context = {
+        'name': resume.name,
+        'email': resume.email,
+        'phone': resume.phone,
+        'linkedin': resume.linkedin,
+        'github': resume.github,
+        'educations': resume.educations.all().order_by('order'),
+        'experiences': resume.experiences.all().order_by('order'),
+        'projects': resume.projects.all().order_by('order'),
+        'skills': [s.name for s in resume.skills.all().order_by('order')],
+        'languages': [l.name for l in resume.languages.all().order_by('order')],
+        'achievements': [a.name for a in resume.achievements.all().order_by('order')],
+    }
+    template_name = 'resume.html' if resume.template in ['', 'classic', 'overleaf'] else f'resume_{resume.template}.html'
+    return render(request, template_name, context)

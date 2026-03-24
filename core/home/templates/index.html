@@ -1,309 +1,243 @@
-<!DOCTYPE html> 
-<html> 
-  
-<head> 
-    <style> 
-        body { 
-            font-family: Arial, sans-serif; 
-        } 
-  
-        .form-container { 
-            width: 70%; 
-            margin: 0 auto; 
-            padding: 20px; 
-            border: 1px solid #ccc; 
-            border-radius: 5px; 
-        } 
-  
-        .form-group { 
-            margin-bottom: 15px; 
-        } 
-  
-        .form-group label { 
-            display: block; 
-            font-weight: bold; 
-        } 
-  
-        .form-group input[type="text"], 
-        .form-group textarea { 
-            width: 100%; 
-            padding: 10px; 
-            border: 1px solid #ccc; 
-            border-radius: 5px; 
-        } 
-  
-        .form-group textarea { 
-            height: 100px; 
-        } 
-  
-        /* Apply styles to the skills input elements */ 
-        .om { 
-            width: 100%; 
-            padding: 10px 20px; 
-            display: flex; 
-            gap: 10px; 
-        } 
-  
-        .ed { 
-            width: 100%; 
-            padding: 10px 20px; 
-            display: flex; 
-            gap: 4%; 
-        } 
-  
-        .com { 
-            width: 80%; 
-            padding: 5px 20px; 
-            display: flex; 
-            gap: 7%; 
-  
-        } 
-  
-        .op { 
-            margin: 10px; 
-  
-        } 
-  
-        .btn1 { 
-            margin-left: 43%; 
-            padding: 15px 15px; 
-            font-size: 15px; 
-            font-weight: bold; 
-            background-color:rgb(35, 144, 208); 
-            border-radius: 10px; 
-            cursor: pointer;
-            transition: background-color 0.3s ease-in-out;
-        }
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Professional Resume Builder</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+    <style>
+        .fade-in { animation: fadeIn 0.4s ease-out forwards; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+        .drag-handle { cursor: grab; }
+        .drag-handle:active { cursor: grabbing; }
+        .sortable-ghost { opacity: 0.4; }
         
-        .btn1:hover {
-            background-color: rgb(25, 104, 168);
+        /* Hide scrollbar for form area for cleaner look */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="bg-gray-100 font-sans h-screen flex flex-col p-2">
+    <!-- Navbar -->
+    <div class="flex justify-between items-center bg-gray-900 text-white p-4 rounded-xl shadow mb-3 mx-2 mt-1 fade-in shrink-0">
+        <h1 class="text-2xl font-bold tracking-tight"><i class="fas fa-file-alt mr-2"></i>Builder Pro</h1>
+        <div class="text-sm font-medium flex items-center">
+            <span class="mr-4 hidden sm:block">Welcome, {{request.user.username}}</span>
+            <a href="{% url 'logout_view' %}" class="bg-gray-700 hover:bg-red-600 transition px-4 py-2 rounded-lg shadow">Logout</a>
+        </div>
+    </div>
+
+    <!-- Main Workspace -->
+    <div class="flex flex-col lg:flex-row gap-4 flex-1 h-0 mx-2 mb-2 fade-in relative" style="animation-delay: 0.1s;">
+        
+        <!-- Auto-Save Status Pop -->
+        <div id="save-status" class="absolute top-4 left-1/2 -translate-x-1/2 z-50 text-xs font-bold bg-green-500 text-white px-3 py-1 rounded shadow-md opacity-0 transition-opacity duration-300 pointer-events-none">
+            Saved
+        </div>
+
+        <!-- Left: Form Editor -->
+        <div class="lg:w-1/2 w-full overflow-y-auto no-scrollbar bg-white rounded-xl shadow-lg p-6 relative">
+            <form id="resume-form" class="space-y-8 pb-20">
+                {% csrf_token %}
+                <input type="hidden" name="resume_id" value="{{resume.id}}">
+
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-2xl font-black text-gray-800 tracking-tight">Your Resume</h2>
+                    <select name="template" onchange="triggerSave()" class="bg-white border border-gray-300 text-sm rounded-lg px-3 py-2 outline-none text-gray-800 shadow-sm focus:ring-2 focus:ring-gray-800 font-bold transition cursor-pointer">
+                        <option value="classic" {% if resume.template == 'classic' or resume.template == 'overleaf' or not resume.template %}selected{% endif %}>Template: Academic (Classic)</option>
+                        <option value="modern" {% if resume.template == 'modern' %}selected{% endif %}>Template: Modern Tech (Sans-serif)</option>
+                    </select>
+                </div>
+
+                <!-- Personal Info -->
+                <section class="p-5 bg-gray-50 rounded-lg border border-gray-200">
+                    <h2 class="text-lg font-bold border-b pb-2 mb-4 text-gray-800"><i class="fas fa-user text-gray-400 mr-2"></i>Personal Info</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <input type="text" name="name" value="{{resume.name}}" placeholder="Full Name" class="w-full p-2 border border-gray-300 rounded focus:border-gray-900 outline-none transition duration-200">
+                        <input type="email" name="email" value="{{resume.email}}" placeholder="Email" class="w-full p-2 border border-gray-300 rounded focus:border-gray-900 outline-none transition duration-200">
+                        <input type="text" name="phone" value="{{resume.phone}}" placeholder="Phone" class="w-full p-2 border border-gray-300 rounded focus:border-gray-900 outline-none transition duration-200">
+                        <input type="text" name="linkedin" value="{{resume.linkedin}}" placeholder="LinkedIn URL" class="w-full p-2 border border-gray-300 rounded focus:border-gray-900 outline-none transition duration-200">
+                        <input type="text" name="github" value="{{resume.github}}" placeholder="GitHub URL" class="w-full p-2 border border-gray-300 rounded focus:border-gray-900 outline-none transition duration-200 md:col-span-2">
+                    </div>
+                </section>
+
+                <!-- Education -->
+                <section class="p-5 bg-gray-50 rounded-lg border border-gray-200">
+                    <h2 class="text-lg font-bold border-b pb-2 mb-4 text-gray-800 flex justify-between">
+                        <span><i class="fas fa-graduation-cap text-gray-400 mr-2"></i>Education</span>
+                        <span class="text-xs text-gray-400 font-normal">Drag to reorder</span>
+                    </h2>
+                    <div id="education-container" class="space-y-3">
+                        {% for ed in resume.educations.all %}
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-3 bg-white p-3 border rounded shadow-sm relative group">
+                            <i class="fas fa-grip-vertical absolute left-1 top-1/2 -translate-y-1/2 text-gray-300 drag-handle opacity-0 group-hover:opacity-100 transition"></i>
+                            <input type="text" name="degree" value="{{ed.degree}}" placeholder="Degree" class="ml-2 mt-1 w-full p-2 border rounded outline-none flex-1">
+                            <input type="text" name="college" value="{{ed.college}}" placeholder="College" class="mt-1 w-full p-2 border rounded outline-none flex-1">
+                            <input type="text" name="edu_year" value="{{ed.year}}" placeholder="Year" class="mt-1 w-full p-2 border rounded outline-none flex-1">
+                        </div>
+                        {% empty %}
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-3 bg-white p-3 border rounded shadow-sm relative group">
+                            <i class="fas fa-grip-vertical absolute left-1 top-1/2 -translate-y-1/2 text-gray-300 drag-handle opacity-0 group-hover:opacity-100 transition"></i>
+                            <input type="text" name="degree" placeholder="Degree" class="ml-2 mt-1 w-full p-2 border rounded outline-none flex-1">
+                            <input type="text" name="college" placeholder="College" class="mt-1 w-full p-2 border rounded outline-none flex-1">
+                            <input type="text" name="edu_year" placeholder="Year" class="mt-1 w-full p-2 border rounded outline-none flex-1">
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <button type="button" onclick="addBlock('education-container')" class="mt-3 text-sm bg-gray-200 hover:bg-gray-300 px-3 py-1.5 rounded transition"><i class="fas fa-plus mr-1"></i> Add Education</button>
+                </section>
+
+                <!-- Experience -->
+                <section class="p-5 bg-gray-50 rounded-lg border border-gray-200">
+                    <h2 class="text-lg font-bold border-b pb-2 mb-4 text-gray-800 flex justify-between">
+                        <span><i class="fas fa-briefcase text-gray-400 mr-2"></i>Experience</span>
+                        <span class="text-xs text-gray-400 font-normal">Drag to reorder</span>
+                    </h2>
+                    <div id="experience-container" class="space-y-3">
+                        {% for exp in resume.experiences.all %}
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 bg-white p-3 border rounded shadow-sm relative group">
+                            <i class="fas fa-grip-vertical absolute left-1 top-1/2 -translate-y-1/2 text-gray-300 drag-handle opacity-0 group-hover:opacity-100 transition"></i>
+                            <input type="text" name="company" value="{{exp.company}}" placeholder="Company" class="ml-2 w-full p-2 border rounded outline-none">
+                            <input type="text" name="post" value="{{exp.post}}" placeholder="Position" class="w-full p-2 border rounded outline-none">
+                            <input type="text" name="exp_duration" value="{{exp.duration}}" placeholder="Duration" class="ml-2 md:ml-0 md:col-span-2 w-full p-2 border rounded outline-none">
+                            <input type="text" name="exp_desc" value="{{exp.desc}}" placeholder="Description" class="ml-2 md:col-span-2 w-full p-2 border rounded outline-none md:ml-0">
+                        </div>
+                        {% empty %}
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 bg-white p-3 border rounded shadow-sm relative group">
+                            <i class="fas fa-grip-vertical absolute left-1 top-1/2 -translate-y-1/2 text-gray-300 drag-handle opacity-0 group-hover:opacity-100 transition"></i>
+                            <input type="text" name="company" placeholder="Company" class="ml-2 w-full p-2 border rounded outline-none">
+                            <input type="text" name="post" placeholder="Position" class="w-full p-2 border rounded outline-none">
+                            <input type="text" name="exp_duration" placeholder="Duration" class="ml-2 md:col-span-2 w-full p-2 border rounded outline-none md:ml-0">
+                            <input type="text" name="exp_desc" placeholder="Description" class="ml-2 md:col-span-2 w-full p-2 border rounded outline-none md:ml-0">
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <button type="button" onclick="addBlock('experience-container')" class="mt-3 text-sm bg-gray-200 hover:bg-gray-300 px-3 py-1.5 rounded transition"><i class="fas fa-plus mr-1"></i> Add Experience</button>
+                </section>
+
+                <!-- Projects -->
+                <section class="p-5 bg-gray-50 rounded-lg border border-gray-200">
+                    <h2 class="text-lg font-bold border-b pb-2 mb-4 text-gray-800 flex justify-between">
+                        <span><i class="fas fa-code text-gray-400 mr-2"></i>Projects</span>
+                        <span class="text-xs text-gray-400 font-normal">Drag to reorder</span>
+                    </h2>
+                    <div id="project-container" class="space-y-3">
+                        {% for proj in resume.projects.all %}
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 bg-white p-3 border rounded shadow-sm relative group">
+                            <i class="fas fa-grip-vertical absolute left-1 top-1/2 -translate-y-1/2 text-gray-300 drag-handle opacity-0 group-hover:opacity-100 transition"></i>
+                            <input type="text" name="project" value="{{proj.title}}" placeholder="Project Title" class="ml-2 w-full p-2 border rounded outline-none">
+                            <input type="text" name="proj_duration" value="{{proj.duration}}" placeholder="Duration" class="w-full p-2 border rounded outline-none">
+                            <input type="text" name="proj_desc" value="{{proj.desc}}" placeholder="Description" class="ml-2 md:col-span-2 w-full p-2 border rounded outline-none md:ml-0">
+                        </div>
+                        {% empty %}
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 bg-white p-3 border rounded shadow-sm relative group">
+                            <i class="fas fa-grip-vertical absolute left-1 top-1/2 -translate-y-1/2 text-gray-300 drag-handle opacity-0 group-hover:opacity-100 transition"></i>
+                            <input type="text" name="project" placeholder="Project Title" class="ml-2 w-full p-2 border rounded outline-none">
+                            <input type="text" name="proj_duration" placeholder="Duration" class="w-full p-2 border rounded outline-none">
+                            <input type="text" name="proj_desc" placeholder="Description" class="ml-2 md:col-span-2 w-full p-2 border rounded outline-none md:ml-0">
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <button type="button" onclick="addBlock('project-container')" class="mt-3 text-sm bg-gray-200 hover:bg-gray-300 px-3 py-1.5 rounded transition"><i class="fas fa-plus mr-1"></i> Add Project</button>
+                </section>
+
+                <!-- Skills & Languages -->
+                <section class="p-5 bg-gray-50 rounded-lg border border-gray-200">
+                    <h2 class="text-lg font-bold border-b pb-2 mb-4 text-gray-800"><i class="fas fa-tools text-gray-400 mr-2"></i>Skills / Achievements</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label class="block text-xs font-bold text-gray-500 mb-2 uppercase">Skills</label>
+                            <div id="skills-container" class="space-y-2">
+                                {% for s in resume.skills.all %}
+                                <div class="flex items-center group"><i class="fas fa-bars drag-handle text-gray-300 mr-2 opacity-0 group-hover:opacity-100"></i><input type="text" name="skills" value="{{s.name}}" class="w-full p-2 border rounded outline-none"></div>
+                                {% empty %}
+                                <div class="flex items-center group"><i class="fas fa-bars drag-handle text-gray-300 mr-2 opacity-0 group-hover:opacity-100"></i><input type="text" name="skills" placeholder="Skill" class="w-full p-2 border rounded outline-none"></div>
+                                {% endfor %}
+                            </div>
+                            <button type="button" onclick="addInput('skills-container', 'skills')" class="mt-2 text-xs text-blue-600 font-bold hover:underline">+ Add Skill</button>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-500 mb-2 uppercase">Achievements</label>
+                            <div id="ach-container" class="space-y-2">
+                                {% for a in resume.achievements.all %}
+                                <div class="flex items-center group"><i class="fas fa-bars drag-handle text-gray-300 mr-2 opacity-0 group-hover:opacity-100"></i><input type="text" name="achievement" value="{{a.name}}" class="w-full p-2 border rounded outline-none"></div>
+                                {% empty %}
+                                <div class="flex items-center group"><i class="fas fa-bars drag-handle text-gray-300 mr-2 opacity-0 group-hover:opacity-100"></i><input type="text" name="achievement" placeholder="Achievement" class="w-full p-2 border rounded outline-none"></div>
+                                {% endfor %}
+                            </div>
+                            <button type="button" onclick="addInput('ach-container', 'achievement')" class="mt-2 text-xs text-blue-600 font-bold hover:underline">+ Add Achievement</button>
+                        </div>
+                    </div>
+                </section>
+
+            </form>
+        </div>
+
+        <!-- Right: Live Split Screen Preview -->
+        <div class="lg:w-1/2 hidden lg:flex flex-col bg-gray-600 rounded-xl shadow-inner border border-gray-700 overflow-hidden relative">
+            <div class="bg-gray-800 text-gray-300 text-xs px-4 py-2 flex justify-between tracking-widest uppercase">
+                <span>Live Preview (Classic Print Mode)</span>
+                <!-- Button to trigger iframe's print dialog directly -->
+                <button onclick="document.getElementById('preview-iframe').contentWindow.print()" class="text-white bg-blue-600 hover:bg-blue-500 px-3 py-1 rounded transition">Generate PDF</button>
+            </div>
+            <iframe id="preview-iframe" src="{% url 'resume_preview' resume.id %}" class="flex-1 w-full border-none bg-white"></iframe>
+        </div>
+    </div>
+
+    <!-- JS Logic -->
+    <script>
+        // Form duplication logic with CSS animations
+        function addBlock(containerId) {
+            const container = document.getElementById(containerId);
+            const block = container.children[0].cloneNode(true);
+            block.querySelectorAll('input').forEach(input => input.value = '');
+            block.classList.add('fade-in'); // animate new entry
+            container.appendChild(block);
+            triggerSave();
         }
-  
-        /* You can add more styles as needed */ 
-    </style> 
-</head> 
-  
-<body> 
-  
-    <form action="{% url 'resume' %}" method="post"> 
-        {% csrf_token %} 
-  
-  
-        <!-- ===================PERSONAL INFORMATION====================== -->
-  
-        <div class="form-container"> 
-            <h2>Personal Information</h2> 
-            <div class="form-group"> 
-                <label for="name">Name:</label> 
-                <input type="text" id="name" name="name"> 
-            </div> 
-            <div class="form-group"> 
-                <label for="name">About:</label> 
-                <input type="text" id="name" name="about"> 
-            </div> 
-            <div class="form-group"> 
-                <label for="age">Age:</label> 
-                <input type="text" id="age" name="age"> 
-            </div> 
-            <div class="form-group"> 
-                <label for="email">Email:</label> 
-                <input type="text" id="email" name="email"> 
-            </div> 
-            <div class="form-group"> 
-                <label for="phone">Phone:</label> 
-                <input type="text" id="phone" name="phone"> 
-            </div> 
-            <div class="form-group "> 
-                <label for="skills">Skills:</label> 
-                <div class="om"> 
-                    <input type="text" id="skills" name="skill1"> 
-                    <input type="text" id="skills" name="skill2"> 
-                    <input type="text" id="skills" name="skill3"> 
-                    <input type="text" id="skills" name="skill4"> 
-                    <input type="text" id="skills" name="skill5"> 
-                </div> 
-            </div> 
-  
-                <!-- =====================EDUCATION SECTION ================== -->
-  
-                 <!-- -----EDUCATION 1----- -->
-                <div class="form-group"> 
-                    <label for="education1">Education 1:</label> 
-                </div> 
-                <div class="ed"> 
-                    <div class="form-group"> 
-                        <label for="degree1">Degree :</label> 
-                        <input type="text" id="degree1" name="degree1"> 
-                    </div> 
-                    <div class="form-group"> 
-                        <label for="college1">College :</label> 
-                        <input type="text" id="college1" name="college1"> 
-                    </div> 
-                    <div class="form-group"> 
-                        <label for="year1">Year :</label> 
-                        <input type="text" id="year1" name="year1"> 
-                    </div> 
-                </div> 
-  
-                    <!-- -----EDUCATION 2----- -->
-                <div class="form-group"> 
-                    <label for="education1">Education 2:</label> 
-                </div> 
-                <div class="ed"> 
-                    <div class="form-group"> 
-                        <label for="degree1">Degree:</label> 
-                        <input type="text" id="degree1" name="degree2"> 
-                    </div> 
-                    <div class="form-group"> 
-                        <label for="college1">College:</label> 
-                        <input type="text" id="college1" name="college2"> 
-                    </div> 
-                    <div class="form-group"> 
-                        <label for="year1">Year:</label> 
-                        <input type="text" id="year1" name="year2"> 
-                    </div> 
-                </div> 
-  
-                    <!-- -----EDUCATION 3----- -->
-                <div class="form-group"> 
-                    <label for="education1">Education 3:</label> 
-                </div> 
-                <div class="ed"> 
-                    <div class="form-group"> 
-                        <label for="degree1">Degree:</label> 
-                        <input type="text" id="degree1" name="degree3"> 
-                    </div> 
-                    <div class="form-group"> 
-                        <label for="college1">College:</label> 
-                        <input type="text" id="college1" name="college3"> 
-                    </div> 
-                    <div class="form-group"> 
-                        <label for="year1">Year:</label> 
-                        <input type="text" id="year1" name="year3"> 
-                    </div> 
-                </div> 
-  
-                <!-- ================LANGUAGAES======================= -->
-  
-                <div class="form-group "> 
-                    <label for="skills">Languages :</label> 
-                    <div class="om"> 
-                        <input type="text" id="skills" name="lang1"> 
-                        <input type="text" id="skills" name="lang2"> 
-                        <input type="text" id="skills" name="lang3"> 
-                    </div> 
-                </div> 
-  
-                <!-- =====================PROJECT SECTION=================== -->
-  
-                <!-- PROJECT 1 -->
-  
-                <div class="form-group"> 
-                    <label for="experience1">Project 1 :</label> 
-                </div> 
-                <div class="com"> 
-                    <div class="form-group "> 
-                        <label for="company1">Project Title :</label> 
-                        <input type="text" id="company1" name="project1"> 
-                    </div> 
-                    <div class="form-group"> 
-                        <label for="post1">Duration :</label> 
-                        <input type="text" id="post1" name="durat1"> 
-                    </div> 
-                </div> 
-                <div class="form-group"> 
-                    <label for="description1">Description :</label> 
-                    <input type="text" id="duration1" name="desc1"> 
-                </div> 
-  
-                <!-- PROJECT 2 -->
-  
-                <div class="form-group"> 
-                    <label for="experience1">Project 2 :</label> 
-                      
-                </div> 
-                <div class="com"> 
-                    <div class="form-group "> 
-                        <label for="company1">Project Title :</label> 
-                        <input type="text" id="company1" name="project2"> 
-                    </div> 
-                    <div class="form-group"> 
-                        <label for="post1">Duration :</label> 
-                        <input type="text" id="post1" name="durat2"> 
-                    </div> 
-                </div> 
-                <div class="form-group"> 
-                    <label for="description1">Description :</label> 
-                    <input type="text" id="duration1" name="desc2"> 
-                </div> 
-  
-                <!-- =======================EXPERICNECE SECTION===================== -->
-                <div class="form-group"> 
-                    <label for="experience1">Experience 1:</label> 
-                </div> 
-                <div class="com"> 
-                    <div class="form-group "> 
-                        <label for="company1">Company Name :</label> 
-                        <input type="text" id="company1" name="company1"> 
-                    </div> 
-                    <div class="form-group"> 
-                        <label for="post1">Post :</label> 
-                        <input type="text" id="post1" name="post1"> 
-                    </div> 
-                    <div class="form-group"> 
-                        <label for="duration1">Duration :</label> 
-                        <input type="text" id="duration1" name="duration1"> 
-                    </div> 
-                </div> 
-                <div class="form-group "> 
-                    <label for="description1">Description :</label> 
-                    <div class="op"> 
-                        <input type="text" id="duration1" name="lin11"> 
-                    </div> 
-                </div> 
-                <div class="form-group"> 
-                    <label for="experience1">Experience 2:</label> 
-                </div> 
-                <div class="com"> 
-                    <div class="form-group "> 
-                        <label for="company1">Company Name :</label> 
-                        <input type="text" id="company1" name="company2"> 
-                    </div> 
-                    <div class="form-group"> 
-                        <label for="post1">Post :</label> 
-                        <input type="text" id="post1" name="post2"> 
-                    </div> 
-                    <div class="form-group"> 
-                        <label for="duration1">Duration :</label> 
-                        <input type="text" id="duration1" name="duration2"> 
-  
-                    </div> 
-                </div> 
-                <div class="form-group"> 
-                    <label for="description1">Description :</label> 
-                    <input type="text" id="duration1" name="lin21"> 
-                </div> 
-  
-                <!-- ==========================ACHIEVEMENT================= -->
-  
-                <div class="form-group"> 
-                    <label for="experience1">Achievement :</label> 
-                </div> 
-                <div class="form-group "> 
-                    <label for="company1">First :</label> 
-                    <input type="text" id="company1" name="ach1"> 
-                </div> 
-                <div class="form-group"> 
-                    <label for="post1">Second :</label> 
-                    <input type="text" id="post1" name="ach2"> 
-                </div> 
-                <div class="form-group"> 
-                    <label for="duration1">Third :</label> 
-                    <input type="text" id="duration1" name="ach3"> 
-                </div> 
-                <button type="submit" class=" btn1 ">Submit</button> 
-            </div> 
-    </form> 
-</body> 
-  
+        function addInput(containerId, inputName) {
+            const container = document.getElementById(containerId);
+            const div = document.createElement('div');
+            div.className = "flex items-center group fade-in";
+            div.innerHTML = `<i class="fas fa-bars drag-handle text-gray-300 mr-2 opacity-0 group-hover:opacity-100"></i><input type="text" name="${inputName}" class="w-full p-2 border rounded outline-none">`;
+            container.appendChild(div);
+        }
+
+        // Live Auto-Save Logic
+        const form = document.getElementById('resume-form');
+        const iframe = document.getElementById('preview-iframe');
+        const saveStatus = document.getElementById('save-status');
+        let timeout = null;
+
+        function triggerSave() {
+            clearTimeout(timeout);
+            timeout = setTimeout(() => {
+                const formData = new FormData(form);
+                fetch("{% url 'save_resume' %}", {
+                    method: 'POST',
+                    body: formData,
+                    headers: { 'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value }
+                }).then(response => {
+                    if(response.ok) {
+                        saveStatus.style.opacity = 1;
+                        iframe.src = iframe.src; // Reload Preview
+                        setTimeout(() => { saveStatus.style.opacity = 0; }, 1500);
+                    }
+                });
+            }, 800); // 800ms debounce
+        }
+
+        // Bind auto-save to typing
+        form.addEventListener('input', triggerSave);
+
+        // Drag and Drop (SortableJS) logic
+        const sortOptions = { animation: 150, handle: '.drag-handle', ghostClass: 'sortable-ghost', onEnd: triggerSave };
+        new Sortable(document.getElementById('education-container'), sortOptions);
+        new Sortable(document.getElementById('experience-container'), sortOptions);
+        new Sortable(document.getElementById('project-container'), sortOptions);
+        new Sortable(document.getElementById('skills-container'), sortOptions);
+        new Sortable(document.getElementById('ach-container'), sortOptions);
+    </script>
+</body>
 </html>

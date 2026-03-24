@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <title>Login - Builder Pro</title>
+</head>
+<body class="bg-gray-100 flex items-center justify-center h-screen font-sans">
+    <form method="POST" class="bg-white p-10 rounded-2xl shadow-2xl space-y-6 w-96 transform transition hover:scale-105 duration-300">
+        {% csrf_token %}
+        <div class="text-center">
+            <h2 class="text-3xl font-extrabold text-gray-800 tracking-tight">Welcome Back</h2>
+            <p class="text-gray-500 text-sm mt-2">Login to manage your resumes</p>
+        </div>
+        <div>
+            <input type="text" name="username" placeholder="Username" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-800 outline-none transition" required>
+        </div>
+        <div>
+            <input type="password" name="password" placeholder="Password" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-800 outline-none transition" required>
+        </div>
+        <button type="submit" class="w-full bg-gray-900 text-white p-3 rounded-lg font-bold shadow-lg hover:bg-black transition-colors">Login</button>
+        <p class="text-sm text-center text-gray-600">Don't have an account? <a href="{% url 'register_view' %}" class="text-blue-600 font-bold hover:underline">Register</a></p>
+    </form>
+</body>
+</html>
